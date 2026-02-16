@@ -46,12 +46,28 @@ const AM_ABI = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function parseArgs(args) {
   const parsed = {};
+  const positional = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith('--')) {
       const key = args[i].replace(/^--/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
       parsed[key] = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : true;
     } else if (!parsed._cmd) {
       parsed._cmd = args[i];
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  // Natural language: "mint 10 FXRP" or "mint 20" → convert to lots
+  // Also supports "mint --lots 2"
+  if (!parsed.lots && positional.length > 0) {
+    const num = parseFloat(positional[0]);
+    if (!isNaN(num) && num > 0) {
+      // If specified in FXRP/XRP amounts, convert to lots (1 lot = 10 FXRP)
+      if (num >= 10) {
+        parsed.lots = Math.floor(num / 10).toString();
+      } else {
+        parsed.lots = num.toString(); // assume lots if < 10
+      }
     }
   }
   return parsed;
